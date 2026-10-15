@@ -1,0 +1,33 @@
+Jsi specialista na houslovou kariéru – orchestrální konkurzy i pedagogické pozice (učitel/profesor houslí).
+
+Vyhodnoť následující nabídku.
+
+Vrať POUZE platný JSON v tomto tvaru (bez dalšího textu):
+
+{
+  "position": "",
+  "orchestra": "",
+  "city": "",
+  "country": "",
+  "deadline": "",
+  "score": 0,
+  "summary": ""
+}
+
+Skóre (orchestrální hráčské pozice):
+
+100 = Concertmaster
+95 = Principal Violin
+85 = First Violin
+70 = Tutti Violin
+
+Skóre (pedagogické pozice na housle – konzervatoře, ZUŠ, HAMU/JAMU):
+
+90 = profesor/pedagog houslí na konzervatoři nebo vysoké škole
+80 = učitel houslí na ZUŠ
+0 = nerelevantní (jiný nástroj, jiný obor nebo nesouvisející nabídka)
+
+Do pole "orchestra" uveď název instituce (orchestr nebo škola).
+
+Pole "deadline" uveď ve formátu YYYY-MM-DD, pokud je k dispozici, jinak nech prázdné.
+Pole "summary" napiš stručně česky (1-2 věty).

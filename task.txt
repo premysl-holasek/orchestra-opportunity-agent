@@ -1,0 +1,301 @@
+Pro MVP bych připravil něco, co můžeš rovnou založit jako GitHub repozitář a spustit lokálně nebo přes GitHub Actions.
+
+## MVP rozsah
+
+### Agent 1 – Opportunity Scout
+
+Sleduje:
+
+* Musical Chairs
+* Muvac
+* české orchestry (ručně definovaný seznam)
+
+Výstup:
+
+```json
+{
+  "title": "Principal Violin",
+  "organization": "Filharmonie Brno",
+  "url": "...",
+  "source": "muvac",
+  "content": "..."
+}
+```
+
+### Agent 2 – Evaluator
+
+Pomocí OpenAI:
+
+* extrakce pozice
+* extrakce orchestru
+* klasifikace relevance
+* vytvoření shrnutí
+
+### Notifikace
+
+* e-mail (SMTP)
+* Slack webhook
+
+### Uložení
+
+SQLite
+
+---
+
+# Struktura projektu
+
+```text
+orchestra-opportunity-agent/
+│
+├── app/
+│   ├── collectors/
+│   │   ├── base.py
+│   │   ├── muvac.py
+│   │   ├── musicalchairs.py
+│   │   └── czech_orchestras.py
+│   │
+│   ├── agents/
+│   │   ├── evaluator.py
+│   │   └── weekly_report.py
+│   │
+│   ├── notifications/
+│   │   ├── email.py
+│   │   └── slack.py
+│   │
+│   ├── storage/
+│   │   └── database.py
+│   │
+│   └── models.py
+│
+├── prompts/
+│   └── evaluator.txt
+│
+├── config.py
+├── main.py
+├── requirements.txt
+└── .github/workflows/run.yml
+```
+
+---
+
+# requirements.txt
+
+```txt
+openai>=1.100.0
+playwright
+beautifulsoup4
+lxml
+sqlalchemy
+pydantic
+python-dotenv
+requests
+```
+
+---
+
+# Datový model
+
+```python
+from pydantic import BaseModel
+
+class Opportunity(BaseModel):
+    source: str
+    title: str
+    organization: str
+    url: str
+    content: str
+```
+
+---
+
+# Databáze
+
+```python
+class OpportunityEntity(Base):
+    __tablename__ = "opportunities"
+
+    id = Column(Integer, primary_key=True)
+    url = Column(String, unique=True)
+
+    source = Column(String)
+    title = Column(String)
+    organization = Column(String)
+
+    score = Column(Integer)
+    summary = Column(Text)
+
+    created_at = Column(DateTime)
+```
+
+---
+
+# Prompt evaluátoru
+
+`prompts/evaluator.txt`
+
+```text
+Jsi specialista na orchestrální kariéru.
+
+Vyhodnoť následující nabídku.
+
+Vrať JSON:
+
+{
+  "position": "",
+  "orchestra": "",
+  "city": "",
+  "country": "",
+  "deadline": "",
+  "score": 0,
+  "summary": ""
+}
+
+Skóre:
+
+100 = Concertmaster
+95 = Principal Violin
+85 = First Violin
+70 = Tutti Violin
+0 = nerelevantní
+```
+
+---
+
+# Evaluator
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+def evaluate(text: str):
+    response = client.responses.create(
+        model="gpt-5",
+        input=[
+            {
+                "role": "user",
+                "content": text
+            }
+        ]
+    )
+
+    return response.output_text
+```
+
+---
+
+# Slack notifier
+
+```python
+import requests
+
+def send_slack(message, webhook):
+    requests.post(
+        webhook,
+        json={"text": message},
+        timeout=30
+    )
+```
+
+---
+
+# Email notifier
+
+```python
+import smtplib
+from email.message import EmailMessage
+
+def send_email(subject, body):
+    msg = EmailMessage()
+
+    msg["Subject"] = subject
+    msg["From"] = SMTP_USER
+    msg["To"] = RECIPIENT
+
+    msg.set_content(body)
+
+    with smtplib.SMTP_SSL(
+        SMTP_HOST,
+        SMTP_PORT
+    ) as smtp:
+        smtp.login(
+            SMTP_USER,
+            SMTP_PASSWORD
+        )
+        smtp.send_message(msg)
+```
+
+---
+
+# Hlavní orchestrátor
+
+```python
+def run():
+    opportunities = []
+
+    opportunities.extend(fetch_muvac())
+    opportunities.extend(fetch_musicalchairs())
+    opportunities.extend(fetch_czech_orchestras())
+
+    for opp in opportunities:
+
+        if exists(opp.url):
+            continue
+
+        result = evaluate(opp.content)
+
+        save(result)
+
+        if result["score"] >= 80:
+            notify(result)
+```
+
+---
+
+# GitHub Actions
+
+`.github/workflows/run.yml`
+
+```yaml
+name: Orchestra Agent
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - run: python main.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+```
+
+---
+
+## Doporučené rozšíření po MVP
+
+1. FastAPI dashboard
+2. RSS feed s nalezenými konkurzy
+3. Týdenní AI report
+4. Automatické sledování konkurzů v:
+
+   * Česká republika
+   * Slovensko
+   * Rakousko
+   * Německo
+
+Protože pozice koncertních mistrů a prvních houslí jsou poměrně vzácné, dává smysl sledovat i okolní země a filtrovat je podle vzdálenosti nebo jazyka.
