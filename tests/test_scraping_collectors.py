@@ -20,7 +20,7 @@ def test_musicalchairs_collect_extracts_jobs(monkeypatch):
     </body></html>
     """
     collector = MusicalChairsCollector()
-    monkeypatch.setattr(collector, "fetch", lambda url: _soup(html))
+    monkeypatch.setattr(collector, "fetch", lambda url, headers=None: _soup(html))
 
     result = collector.collect()
 
@@ -35,7 +35,7 @@ def test_musicalchairs_collect_extracts_jobs(monkeypatch):
 def test_musicalchairs_skips_empty_titles(monkeypatch):
     html = '<a href="/jobs/1"></a>'
     collector = MusicalChairsCollector()
-    monkeypatch.setattr(collector, "fetch", lambda url: _soup(html))
+    monkeypatch.setattr(collector, "fetch", lambda url, headers=None: _soup(html))
     assert collector.collect() == []
 
 
@@ -45,7 +45,7 @@ def test_musicalchairs_dedupes_urls(monkeypatch):
     <a href="/jobs/1">One again</a>
     """
     collector = MusicalChairsCollector()
-    monkeypatch.setattr(collector, "fetch", lambda url: _soup(html))
+    monkeypatch.setattr(collector, "fetch", lambda url, headers=None: _soup(html))
     result = collector.collect()
     assert len(result) == 1
 
