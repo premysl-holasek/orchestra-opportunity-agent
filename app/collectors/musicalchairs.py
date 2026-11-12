@@ -9,6 +9,13 @@ from app.models import Opportunity
 # Strings auditions listing. Change the instrument segment to track others.
 LISTING_URL = "https://www.musicalchairs.info/violin/jobs"
 
+# The site sits behind Anubis (proof-of-work anti-bot), which only challenges
+# browser-like user agents containing "Mozilla". Identifying as an honest bot
+# bypasses the challenge and returns the real listing.
+HEADERS = {
+    "User-Agent": "OrchestraOpportunityAgent/1.0 (+https://github.com/)",
+}
+
 
 class MusicalChairsCollector(BaseCollector):
     """Scrape audition listings from Musical Chairs.
@@ -20,7 +27,7 @@ class MusicalChairsCollector(BaseCollector):
     source = "musicalchairs"
 
     def collect(self) -> list[Opportunity]:
-        soup = self.fetch(LISTING_URL)
+        soup = self.fetch(LISTING_URL, headers=HEADERS)
         opportunities: list[Opportunity] = []
 
         for row in soup.select("a[href*='/jobs/']"):
