@@ -41,10 +41,11 @@ class BaseCollector(abc.ABC):
             return []
 
     @staticmethod
-    def fetch(url: str) -> BeautifulSoup:
+    def fetch(url: str, headers: dict[str, str] | None = None) -> BeautifulSoup:
         """Fetch a URL and return a parsed BeautifulSoup document."""
+        merged = {**DEFAULT_HEADERS, **(headers or {})}
         response = requests.get(
-            url, headers=DEFAULT_HEADERS, timeout=REQUEST_TIMEOUT
+            url, headers=merged, timeout=REQUEST_TIMEOUT
         )
         response.raise_for_status()
         return BeautifulSoup(response.text, "lxml")
